@@ -24,10 +24,10 @@ public class BoxObstacle : MonoBehaviour
         _center = transform.position;
     }
 
-    private void FixedUpdate()
+    private void Update()
     {
         CheckBorders();
-        transform.position += new Vector3(_x * _xSpeed, _y * _ySpeed, _z * _zSpeed) * Time.fixedDeltaTime;
+        transform.position += new Vector3(_x * _xSpeed, _y * _ySpeed, _z * _zSpeed) * Time.deltaTime;
     }
 
     private void CheckBorders()

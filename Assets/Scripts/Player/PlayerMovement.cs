@@ -9,14 +9,18 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private Transform _camera;
     [SerializeField, Range(1, 10)] private float _movementSpeed;
     [SerializeField, Range(1, 10)] private float _mouseSensitivity;
-    
+
     [Header("Gravity")]
     [SerializeField] private float _jumpForce = 10f;
     [SerializeField] private float _fallMultiplier = 2.5f; //Коэф. падения
     [SerializeField] private float _ascendMultiplier = 2f; //Коэф. ускорения в прыжке
     [SerializeField] private LayerMask _groundLayer;
 
+    [Header("Animations")]
+    [SerializeField, Range(0, 1)] private float _animationChangeTime;
+
     private Rigidbody _rb;
+    private Animator _animator;
 
     #region Controls
     private Controls _controls;
@@ -46,6 +50,8 @@ public class PlayerMovement : MonoBehaviour
         _rb = GetComponent<Rigidbody>();
         _rb.freezeRotation = true;
 
+        _animator = GetComponent<Animator>();
+
         _playerHeight = GetComponent<CapsuleCollider>().height * transform.localScale.y;
         _raycastDistance = (_playerHeight / 2) + 0.2f;
 
@@ -65,11 +71,11 @@ public class PlayerMovement : MonoBehaviour
         _mousePosition = _cameraInput.ReadValue<Vector2>();
 
         RotateCamera();
-
-        if (!_isGrounded && _groundCheckTimer <= 0f)
+        if (_groundCheckTimer <= 0f)
         {
             Vector3 rayOrigin = transform.position + Vector3.up * 0.1f;
             _isGrounded = Physics.Raycast(rayOrigin, Vector3.down, _raycastDistance, _groundLayer);
+            _animator.SetBool("IsGrounded", _isGrounded);
         }
         else
         {
@@ -85,17 +91,20 @@ public class PlayerMovement : MonoBehaviour
 
     private void MovePlayer()
     {
+        if (_moveDirection == Vector2.zero)
+            _animator.SetFloat("Speed", 0f, _animationChangeTime, Time.deltaTime);
+        else
+            _animator.SetFloat("Speed", 1f, _animationChangeTime, Time.deltaTime);
+
         Vector3 movement = (transform.right * _moveDirection.x + transform.forward * _moveDirection.y) * _movementSpeed;
 
-        Vector3 velocity = _rb.linearVelocity; //Вот в этом месте была ошибка
-        velocity.x = movement.x; //Я случайно перезаписывал значение velocity.y постоянно на 0 :)
+        Vector3 velocity = _rb.linearVelocity; 
+        velocity.x = movement.x; 
         velocity.z = movement.z;
         _rb.linearVelocity = velocity;
 
-        if (_isGrounded && _moveDirection.x == 0 && _moveDirection.y == 0) //При резкой остановке, мы не будем скользить по земле
-        {
+        if (_isGrounded && _moveDirection.x == 0 && _moveDirection.y == 0) 
             _rb.linearVelocity = new Vector3(0, _rb.linearVelocity.y, 0);
-        }
     }
 
     private void RotateCamera()
@@ -111,8 +120,9 @@ public class PlayerMovement : MonoBehaviour
     }
 
     private void Jump(InputAction.CallbackContext context)
-    {  
+    {
         if (!_isGrounded) return;
+        _animator.SetBool("IsJumping", true);
         _isGrounded = false;
         _groundCheckTimer = _groundCheckDelay;
         _rb.linearVelocity = new Vector3(_rb.linearVelocity.x, _jumpForce, _rb.linearVelocity.z);
@@ -122,12 +132,17 @@ public class PlayerMovement : MonoBehaviour
     {
         if (_rb.linearVelocity.y < 0) //Падение
         {
+            _animator.SetBool("IsJumping", false);
+            if (_isGrounded)
+                _animator.SetBool("IsFalling", false);
+            else
+                _animator.SetBool("IsFalling", true);
             _rb.linearVelocity += Vector3.up * Physics.gravity.y * _fallMultiplier * Time.fixedDeltaTime;
         }
         else if (_rb.linearVelocity.y > 0) //Прыжок
         {
             _rb.linearVelocity += Vector3.up * Physics.gravity.y * _ascendMultiplier * Time.fixedDeltaTime;
-        }    
+        }
     }
 
     private void OnDisable()
