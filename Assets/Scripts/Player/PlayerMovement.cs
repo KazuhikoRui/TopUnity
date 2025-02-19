@@ -53,7 +53,7 @@ public class PlayerMovement : MonoBehaviour
         _animator = GetComponent<Animator>();
 
         _playerHeight = GetComponent<CapsuleCollider>().height * transform.localScale.y;
-        _raycastDistance = (_playerHeight / 2) + 0.2f;
+        _raycastDistance = 0.3f; //(_playerHeight / 2) + 0.2f;
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -71,10 +71,12 @@ public class PlayerMovement : MonoBehaviour
         _mousePosition = _cameraInput.ReadValue<Vector2>();
 
         RotateCamera();
-        if (_groundCheckTimer <= 0f)
+        if (!_isGrounded && _groundCheckTimer <= 0f)
         {
+            //RaycastHit hit;
             Vector3 rayOrigin = transform.position + Vector3.up * 0.1f;
             _isGrounded = Physics.Raycast(rayOrigin, Vector3.down, _raycastDistance, _groundLayer);
+            //_isGrounded = Physics.SphereCast(rayOrigin, 0.35f, Vector3.down, out hit, _raycastDistance, _groundLayer);
             _animator.SetBool("IsGrounded", _isGrounded);
         }
         else
@@ -123,6 +125,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (!_isGrounded) return;
         _animator.SetBool("IsJumping", true);
+        _animator.SetBool("IsGrounded", false);
         _isGrounded = false;
         _groundCheckTimer = _groundCheckDelay;
         _rb.linearVelocity = new Vector3(_rb.linearVelocity.x, _jumpForce, _rb.linearVelocity.z);
